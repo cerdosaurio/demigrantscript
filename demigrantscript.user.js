@@ -22,7 +22,8 @@ function pintaPostsOp() {
     if(hrefOp) {
         $("a.bigusername").each(function() {
             if($(this).attr("href") == hrefOp) {
-                $(this).parents("table").first().css("border", "solid 1px #f20").css("border-left-width", "5px");
+                $(this).parents("table").first().css("border", "solid 1px #c30").css("border-left-width", "5px");
+                $(this).parent().parent().attr("width", "171");
             }
         });
     }
@@ -31,7 +32,7 @@ function pintaPostsOp() {
             if($(this).attr("style") == "border:1px inset") {
                 var div = $(this).children().first();
                 if(div.is("div") && $.trim(div.text()) == "Originalmente Escrito por " + op)
-                    $(this).css("border", "solid 1px #f20").css("border-left-width", "5px");
+                    $(this).css("border", "solid 1px #c30").css("border-left-width", "5px");
             }
         });
     }
