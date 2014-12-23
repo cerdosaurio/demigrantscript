@@ -2,7 +2,7 @@
 Demigrant Script
 ================
 
-Mierdoso y demigrante sucedáneo de Shurscript (dep).
+Sucedáneo demigrante de Shurscript (dep).
 
 Pa instalarlo primero nesecitas tener instalado en el navegador **TamperMonkey**, **GreaseMonkey** o alguna cosica desas. Si tenías Shurscript (rip) instalao seguramente ya lo tengas. A luego [clica aquí premoh](https://github.com/cerdosaurio/demigrantscript/raw/master/demigrantscript.user.js) e ya.
 
