@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name         Demigrant Script
-// @namespace    http://your.homepage/
-// @version      0.1
-// @description  mierdoso y demigrante sucedáneo de shurscript
+// @namespace    https://github.com/cerdosaurio/
+// @version      0.1.1
+// @description  Sucedáneo demigrante de shurscript
 // @author       cerdosaurio
-// @include      http://www.forocoches.com*
-// @include      http://forocoches.com*
+// @include      http://www.forocoches.com/foro/showthread.php*
+// @include      http://forocoches.com/foro/showthread.php*
 // @grant        none
 // @require      http://code.jquery.com/jquery-latest.js
 // ==/UserScript==
@@ -22,7 +22,7 @@ function pintaPostsOp() {
     if(hrefOp) {
         $("a.bigusername").each(function() {
             if($(this).attr("href") == hrefOp) {
-                $(this).parents("table").first().css("border", "solid 2px #f20").css("border-left-width", "5px");
+                $(this).parents("table").first().css("border", "solid 1px #f20").css("border-left-width", "5px");
             }
         });
     }
@@ -31,7 +31,7 @@ function pintaPostsOp() {
             if($(this).attr("style") == "border:1px inset") {
                 var div = $(this).children().first();
                 if(div.is("div") && $.trim(div.text()) == "Originalmente Escrito por " + op)
-                    $(this).css("border", "solid 2px #f20").css("border-left-width", "5px");
+                    $(this).css("border", "solid 1px #f20").css("border-left-width", "5px");
             }
         });
     }
@@ -95,7 +95,7 @@ function buscaNuevosPosts() {
 
 $(document).ready(function() {
     var trozosURL = document.URL.split("?", 2);
-    if(trozosURL.length == 2 && (trozosURL[0] == "http://www.forocoches.com/foro/showthread.php" || trozosURL[0] == "http://forocoches.com/foro/showthread.php")) {
+    if(trozosURL.length == 2) {
         url = trozosURL[0];
         var trozosGET = trozosURL[1].split("&");
         var varsGET = {};
