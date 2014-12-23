@@ -1,4 +1,4 @@
-demigrantscript
-===============
+Demigrant Script
+================
 
-mierdoso y demigrante sucedáneo de shurscript
+Mierdoso y demigrante sucedáneo de shurscript
