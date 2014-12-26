@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Demigrant Script
 // @namespace    https://github.com/cerdosaurio/
-// @version      0.1.1
+// @version      0.1.2
 // @description  Sucedáneo demigrante de shurscript
 // @author       cerdosaurio
 // @include      http://www.forocoches.com/foro/showthread.php*
@@ -15,35 +15,6 @@ var hilo = null;
 var pagina = 1;
 var botonNuevosPosts = null;
 var numNuevosPosts = 0;
-var hrefOp = null;
-var op = null;
-
-function pintaPostsOp() {
-    if(hrefOp) {
-        $("a.bigusername").each(function() {
-            if($(this).attr("href") == hrefOp) {
-                $(this).parents("table").first().css("border", "solid 1px #c30").css("border-left-width", "5px");
-                $(this).parent().parent().attr("width", "171");
-            }
-        });
-    }
-    if(op) {
-        $("td.alt2").each(function() {
-            if($(this).attr("style") == "border:1px inset") {
-                var div = $(this).children().first();
-                if(div.is("div") && $.trim(div.text()) == "Originalmente Escrito por " + op)
-                    $(this).css("border", "solid 1px #c30").css("border-left-width", "5px");
-            }
-        });
-    }
-}
-
-function procesaPrimeraPagina(html) {
-    var enlace = $("a.bigusername", html).first();
-    hrefOp = enlace.attr("href");
-    op = enlace.text();
-    pintaPostsOp();
-}
 
 function despliegaNuevosPosts() {
     $(".postInvisible").show();
@@ -52,14 +23,13 @@ function despliegaNuevosPosts() {
 	numNuevosPosts = 0;
     if(document.title.charAt(0) == "*")
         document.title = document.title.substr(2);
-    pintaPostsOp();
 }
 
 function buscaNuevosPosts() {
     $.get(document.URL, function(data) {
         var html = $.parseHTML(data);
         var nuevos = [];
-        $("table.tborder[id^=post]", html).each(function() {
+        $("table[class^=tborder][id^=post]", html).each(function() {
             if(!$("table#" + $(this).attr("id")).length) {
                 numNuevosPosts++;
             	nuevos.push($(this).parent().parent().parent().addClass("postInvisible").hide());
@@ -70,27 +40,27 @@ function buscaNuevosPosts() {
 	            document.title = "* " + document.title;
             var mensajeNuevos = "Hay " + numNuevosPosts + (numNuevosPosts == 1 ? " post nuevo" : " posts nuevos");
             if(!botonNuevosPosts) {
-                botonNuevosPosts = $("<div></div>").attr("style", "cursor:pointer;color:#fff;font-weight:bold;font-size:18px;background-color:#2b4;margin:16px 0;padding:8px;text-align:center");
-	            $("div#posts").append(botonNuevosPosts);
+                botonNuevosPosts = $("<div></div>").attr("style", "cursor:pointer;color:#fff;font-size:18px;background-color:#2b2;margin:16px 0;padding:8px;text-align:center");
+	            $("div#posts #lastpost").before(botonNuevosPosts);
                 botonNuevosPosts.click(despliegaNuevosPosts);
             }
             botonNuevosPosts.text(mensajeNuevos);
-            $("div#posts").append(nuevos);
+            $("div#posts #lastpost").before(nuevos);
         }
         if($(".pagenav a[href$='&page=" + (pagina + 1) + "']", html).length) {
             if(document.title.charAt(0) != "*")
 	            document.title = "* " + document.title;
-            botonNuevaPagina = $("<div></div>").attr("style", "cursor:pointer;color:#fff;font-weight:bold;font-size:18px;background-color:#2b4;margin:16px 0;padding:8px;text-align:center").
+            botonNuevaPagina = $("<div></div>").attr("style", "cursor:pointer;color:#fff;font-size:18px;background-color:#2b2;margin:16px 0;padding:8px;text-align:center").
             	text("Hay una nueva página")
             if(botonNuevosPosts)
 	            botonNuevaPagina.addClass("postInvisible").hide();
             botonNuevaPagina.click(function() {
                 window.location.href = url + "?t=" + hilo + "&page=" + (pagina + 1);
             });
-            $("div#posts").append(botonNuevaPagina);
+            $("div#posts #lastpost").before(botonNuevaPagina);
         }
         else
-	    	setTimeout(buscaNuevosPosts, 60000);
+	    	setTimeout(buscaNuevosPosts, 10000);
     });
 }
 
@@ -109,13 +79,7 @@ $(document).ready(function() {
             hilo = varsGET["t"];
         if(varsGET["page"] !== undefined)
             pagina = Number(varsGET["page"]);
-        if(pagina == 1)
-            procesaPrimeraPagina(document);
-        else
-            $.get("http://www.forocoches.com/foro/showthread.php?t=" + hilo, function(data) {
-                procesaPrimeraPagina($.parseHTML(data));
-            });
         if(!$(".pagenav a[href$='&page=" + (pagina + 1) + "']").length)
-		    setTimeout(buscaNuevosPosts, 60000);
+		    setTimeout(buscaNuevosPosts, 10000);
     }
 });
