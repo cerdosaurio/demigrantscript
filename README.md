@@ -10,5 +10,4 @@ Pa instalarlo primero nesecitas tener instalado en el navegador **TamperMonkey**
 
 Incluye las siguientes carasterízticas del Shurscript (inri) por el momento:
 
-* Resalta los mensajes del maricón del OP con un recuadro/reborde abiselado rojo.
 * Avisa si hay nuevos mensajes en el hilo con el botón verde aquel de "Hay x nuevos posts" y el asterisco en el título de la página.
