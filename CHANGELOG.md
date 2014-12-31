@@ -1,3 +1,7 @@
+## 0.1.3 (2014-12-31)
+
+- Añadidos los avisos de citas; solo se incluyen las 25 últimas.
+
 ## 0.1.2 (2014-12-26)
 
 - Eliminado el resaltado de posts del OP porque Ilitri ya ha añadido la funcionalidad en FC.
