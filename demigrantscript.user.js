@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Demigrant Script
 // @namespace    https://github.com/cerdosaurio/
-// @version      0.1.3
-// @description  Sucedáneo demigrante de shurscript
+// @version      0.2.0
+// @description  Alternativa al Shurscript
 // @author       cerdosaurio
 // @include      http://www.forocoches.com*
 // @include      http://forocoches.com*
@@ -12,6 +12,7 @@
 // ==/UserScript==
 
 var pagina = 1;
+var htmlPrimeraPagina = "";
 var botonNuevosPosts = null;
 var numNuevosPosts = 0;
 var idUsuario = 0;
@@ -28,42 +29,80 @@ function despliegaNuevosPosts() {
         document.title = document.title.substr(2);
 }
 
+function muestraAviso() {
+    $("#sombraModal").show();
+    $("#ventanaAviso").show();
+    $("#ventanaAviso").css("margin-top", -0.5*$("#ventanaAviso").outerHeight() + "px");
+}
+
+function avisoTemaEliminado() {
+    var htmlAviso = "<h2><img src=\"http://i.imgur.com/u3rtmQA.png\" width=\"100\" height=\"100\" alt=\"Flanders\" /> Este tema ha sido eliminado</h2>No recargues la página si quieres seguir leyendo los mensajes.";
+    var clasesCuadro = "cuadroHiloEliminado";
+    var htmlCuadro = "<strong>Tema eliminado</strong>";
+    if(htmlPrimeraPagina !== "") {
+        htmlAviso += "<br/><br/><strong>Se ha guardado una copia de la primera página del hilo</strong>; puedes verla <a class=\"verPrimeraPagina\" href=\"#\">aquí</a>.";
+        clasesCuadro += " verPrimeraPagina";
+        htmlCuadro += " - pulsa aquí para ver una copia guardada de la primera página del hilo.";
+    }
+	$("<div class=\"" + clasesCuadro + "\">" + htmlCuadro + "</div>").insertAfter("a#poststop, div#posts");
+    $("#ventanaAviso #mensaje").html(htmlAviso);
+    muestraAviso();
+    $(".verPrimeraPagina").on("click", function() {
+        var nuevaVentana = window.open();
+        nuevaVentana.document.write(htmlPrimeraPagina);
+        nuevaVentana.document.close();
+        return false;
+    });
+}
+
+function detectaTemaEliminado(html) {
+    var avisoEliminado = $("td.panelsurround > div.panel > div[align=left] > div > center", html === undefined ? document : html).first();
+	return avisoEliminado.length && $.trim(avisoEliminado.text()) == "Tema especificado inválido.";
+}
+
 function buscaNuevosPosts() {
     $.get(document.URL, function(data) {
         var html = $.parseHTML(data);
-        var nuevos = [];
-        $("table[class^=tborder][id^=post]", html).each(function() {
-            if(!$("table#" + $(this).attr("id")).length) {
-                numNuevosPosts++;
-            	nuevos.push($(this).parent().parent().parent().addClass("postInvisible").hide());
-            }
-        });
-        if(numNuevosPosts) {
-            if(document.title.charAt(0) != "*")
-	            document.title = "* " + document.title;
-            var mensajeNuevos = "Hay " + numNuevosPosts + (numNuevosPosts == 1 ? " post nuevo" : " posts nuevos");
-            if(!botonNuevosPosts) {
-                botonNuevosPosts = $("<div class=\"botonNuevosPosts\"></div>");
-	            $("div#posts #lastpost").before(botonNuevosPosts);
-                botonNuevosPosts.click(despliegaNuevosPosts);
-            }
-            botonNuevosPosts.text(mensajeNuevos);
-            $("div#posts #lastpost").before(nuevos);
+        if(detectaTemaEliminado(html)) {
+            $("div#posts").remove("#botonNuevaPagina");
+            avisoTemaEliminado();
+            return;
         }
-        var paginadorSiguiente = $(".pagenav a[href$='&page=" + (pagina + 1) + "']", html);
-        if(paginadorSiguiente.length) {
-            if(document.title.charAt(0) != "*")
-	            document.title = "* " + document.title;
-            botonNuevaPagina = $("<div class=\"botonNuevosPosts\"></div>").text("Hay una nueva página");
-            if(botonNuevosPosts)
-	            botonNuevaPagina.addClass("postInvisible").hide();
-            botonNuevaPagina.click(function() {
-                window.location.href = paginadorSiguiente.attr("href");//url + "?t=" + hilo + "&page=" + (pagina + 1);
+        if(!$("#botonNuevaPagina").length) {
+            var nuevos = [];
+            $("table[class^=tborder][id^=post]", html).each(function() {
+                if(!$("table#" + $(this).attr("id")).length) {
+                    numNuevosPosts++;
+                    nuevos.push($(this).parent().parent().parent().addClass("postInvisible").hide());
+                }
             });
-            $("div#posts #lastpost").before(botonNuevaPagina);
+            if(numNuevosPosts) {
+                if(document.title.charAt(0) != "*")
+                    document.title = "* " + document.title;
+                var mensajeNuevos = "Hay " + numNuevosPosts + (numNuevosPosts == 1 ? " post nuevo" : " posts nuevos");
+                if(!botonNuevosPosts) {
+                    botonNuevosPosts = $("<div class=\"botonNuevosPosts\"></div>");
+                    $("div#posts #lastpost").before(botonNuevosPosts);
+                    botonNuevosPosts.click(despliegaNuevosPosts);
+                }
+                botonNuevosPosts.text(mensajeNuevos);
+                $("div#posts #lastpost").before(nuevos);
+            }
+            var paginadorSiguiente = $(".pagenav a[href$='&page=" + (pagina + 1) + "']", html);
+            if(paginadorSiguiente.length) {
+                if(document.title.charAt(0) != "*")
+                    document.title = "* " + document.title;
+                var botonNuevaPagina = $("<div id=\"botonNuevaPagina\" class=\"botonNuevosPosts\"></div>").text("Hay una nueva página");
+                if(botonNuevosPosts)
+                    botonNuevaPagina.addClass("postInvisible").hide();
+                botonNuevaPagina.click(function() {
+                    window.location.href = paginadorSiguiente.attr("href");//url + "?t=" + hilo + "&page=" + (pagina + 1);
+                });
+                $("div#posts #lastpost").before(botonNuevaPagina);
+            }
+//			else
+	    		setTimeout(buscaNuevosPosts, 30000);
         }
-        else
-	    	setTimeout(buscaNuevosPosts, 30000);
     });
 }
 
@@ -168,9 +207,9 @@ function citaLeida(idPost) {
     return citasLeidas.replace(patron, "");
 }
 */
-function cierraCitas() {
-    $('#sombra').hide();
-    $('#modal').hide();
+function cierraModal() {
+    $('#sombraModal').hide();
+    $('.ventanaModal').hide();
     return false;
 }
 
@@ -253,18 +292,40 @@ function buscaCitas() {
         $("#listaCitas").html(htmlNoLeidos + htmlLeidos);
         actualizaContadorCitas();
         $("#abreCitas").on("click", function() {
-            $("#sombra").show();
-            $("#modal").show();
+            $("#sombraModal").show();
+            $("#ventanaCitas").show();
         });
     });
 }
+
 /*
-var elems = document.getElementsByTagName('table');
-for(var i in elems) {
-	if((' ' + elems[i].className + ' ').indexOf(" cajasprin ") > -1)
-		elems[i].parentNode.removeChild(elems[i]);
-}
+var elems = document.querySelectorAll("table.cajasprin");
+for(var i = 0; i < elems.length; i++)
+    if(!elems[i].querySelector("#AutoNumber7") && !elems[i].querySelector("#AutoNumber9"))
+	    elems[i].style.border = "solid 2px #f00";
+//		elems[i].parentNode.removeChild(elems[i]);
+elems = document.querySelectorAll("table.cajanews > tr");
 */
+
+function anhadeVentanaModal(idVentana, titulo, idCuerpo, botones) {
+    var htmlBotones = "";
+    if(botones === undefined)
+        botones = [ { class: "cierraModal", text: "Aceptar" } ];
+	for(var i = 0; i < botones.length; i++)
+        htmlBotones += "<div class=\"botonModal" + (botones[i]["class"] === undefined ? "" : " " + botones[i]["class"]) + "\"" + (botones[i]["id"] === undefined ? "" : " id=\"" + botones[i]["id"]) + "\"" + ">" + botones[i]["text"] + "</div>";
+	$("body").append("<div id=\"" + idVentana + "\" class=\"ventanaModal\">" +
+                     "<table><tbody>" +
+                     "<tr><th></th><th class=\"barraTitulo\">" + titulo + "</th><th>" +
+                     "<a class=\"cierraModal\" href=\"#\" title=\"Cerrar\">X</a>" +
+                     "</th></tr>" +
+                     "<tr><td class=\"espaciado\" colspan=\"3\"></td></tr>" +
+                     "<tr><td></td><td><div id=\"" + idCuerpo + "\"></div></td><td></td></tr>" +
+                     "<tr><td class=\"espaciado\" colspan=\"3\"></td></tr>" +
+                     "<tr><td colspan=\"3\"><div style=\"float: right\">" + htmlBotones + "</div></td></tr>" +
+                     "</tbody></table></div>"
+                    );
+}
+
 $(document).ready(function() {
 
     var head = document.getElementsByTagName("head")[0];
@@ -272,21 +333,30 @@ $(document).ready(function() {
         var style = document.createElement("style");
         style.type = "text/css";
         style.innerHTML =
-            ".botonNuevosPosts { cursor: pointer; color: #fff; font-size: 18px; background-color: #2b2; margin: 16px 0; padding: 8px; text-align: center; }" +
+            ".botonNuevosPosts { cursor: pointer; color: #fff; font-size: 18px; background-color: #2a2; margin: 16px 0; padding: 8px; text-align: center; }" +
+            ".cuadroHiloEliminado { color: #fff; font-size: 18px; background-color: #d20; margin: 16px 0; padding: 8px; text-align: center; }" +
+            ".verPrimeraPagina { cursor: pointer; }" +
             "#abreCitas { white-space: nowrap; color: #ccc; background-color: #fff; }" +
             "#abreCitas.noNuevas { cursor: pointer; color: #c00; background-color: #fff; }" +
-            "#abreCitas.siNuevas { cursor: pointer; color: #fff; background-color: #2b2; }" +
+            "#abreCitas.siNuevas { cursor: pointer; color: #fff; background-color: #2a2; }" +
             "#abreCitas #numCitas { font-size: 24px; text-align: center; }" +
-            "#sombra { display: none; position: fixed; z-index: 100; top: 0; left: 0; width: 100%; height: 100%; background: #000; opacity: 0.5; filter: alpha(opacity=50); }" +
-            "#modal { display: none; position: fixed; z-index: 101; top: 15%; left: 25%; width: 50%; height: 70%; background: #fff; font: 10pt verdana,geneva,lucida,'lucida grande',arial,helvetica,sans-serif; }" +
-            "#modal a { font-weight: normal; }" +
-            "#modal .smallfont { font-size: 11px; }" +
-            "#modal > table { width: 100%; height: 100%; border-spacing: 0; }" +
-            "#modal > table th { font-size: 18px; font-weight:normal; line-height:18px; height: 28px; color: #fff; background-color: #ccc; border-bottom: solid 4px #fff; }" +
-            "#modal > table th a { color: #fff; }" +
-            "#modal > table th:first-child { width: 16px; }" +
-            "#modal > table th.barraTitulo { text-align: left; }" +
-            "#modal > table th:last-child { width: 16px; }" +
+            "#sombraModal { display: none; position: fixed; z-index: 100; top: 0; left: 0; width: 100%; height: 100%; background: #000; opacity: 0.5; filter: alpha(opacity=50); }" +
+            ".ventanaModal { display: none; position: fixed; background: #fff; border: solid 1px #ccc; border-radius: 4px; font: 10pt verdana,geneva,lucida,'lucida grande',arial,helvetica,sans-serif; }" +
+            ".ventanaModal a { font-weight: normal; }" +
+            ".ventanaModal .smallfont { font-size: 11px; }" +
+            ".ventanaModal > table { width: 100%; height: 100%; border-spacing: 0; }" +
+            ".ventanaModal > table th { font-size: 18px; font-weight:normal; line-height:18px; height: 28px; color: #fff; background-color: #ccc; }" +
+            ".ventanaModal > table th a { color: #fff; }" +
+            ".ventanaModal > table th:first-child { width: 16px; }" +
+            ".ventanaModal > table th.barraTitulo { text-align: left; }" +
+            ".ventanaModal > table th:last-child { width: 16px; }" +
+            ".ventanaModal > table td.espaciado { height: 12px; }" +
+            ".ventanaModal > table > tbody > tr:last-child > td { height: 32px; padding: 12px 16px 20px 16px; border-top: solid 1px #ccc; }" +
+            ".ventanaModal .botonModal { display: inline-block; cursor: pointer; width: 98px; height: 14px; border: solid 1px #ccc; border-radius: 4px; margin-left: 8px; padding: 8px 0; font-size: 14px; line-height: 14px; text-align: center; background-color: #eee; color: #333; }" +
+            ".ventanaModal .botonModal:hover { background-color: #ccc; color: #fff; }" +
+            "#ventanaCitas { z-index: 101; top: 15%; left: 25%; width: 50%; height: 70%; }" +
+            "#ventanaAviso { z-index: 102; left: 50%; top: 50%; margin-left: -300px; width: 600px; }" +
+            "#ventanaAviso #mensaje { text-align: center; }" +
             "#listaCitas { width: 100%; height: 100%; overflow-y: auto; }" +
             "#listaCitas > div { margin-right: 16px; border-bottom: solid 1px #ddd; padding-bottom: 8px }" +
             "#listaCitas > div:last-child { border-bottom: none; padding-bottom: 4px }" +
@@ -297,7 +367,7 @@ $(document).ready(function() {
             "#listaCitas td.titulo span.smallfont a { font-weight: normal; }" +
             "#listaCitas td.cuerpo { font-style: italic; }" +
             "#listaCitas div.leido td.cuerpo { font-size: 11px; }" +
-            "#listaCitas div.noLeido td.cuerpo { background: #2b2; }" +
+            "#listaCitas div.noLeido td.cuerpo { background: #2a2; }" +
             "#listaCitas div.noLeido td.cuerpo a { color: #fff; }" +
             "#listaCitas div.botones { margin-top: 4px; font-size: 11px; }";
         head.appendChild(style);
@@ -306,12 +376,23 @@ $(document).ready(function() {
     var aRutaURL = document.URL.match(/^.*:\/\/([a-z\-.]+)(?::[0-9]+)?([^\?#]*).*$/);
     var dominioURL = aRutaURL[1];
     var rutaURL = aRutaURL[2] == "" ? "/" : aRutaURL[2];
-    if(rutaURL == "/foro/showthread.php") {
+    if(rutaURL == "/foro/showthread.php" && !detectaTemaEliminado()) {
         var paginadorActual = $(".pagenav td.alt2 > span.mfont > strong").first();
         if(paginadorActual.length)
             pagina = Number(paginadorActual.text());
         if(!$(".pagenav a[href$='&page=" + (pagina + 1) + "']").length)
 		    setTimeout(buscaNuevosPosts, 30000);
+        if(pagina > 1) {
+            var paginadorPrimera = $(".pagenav td.alt1 > a.mfont").first();
+            if(paginadorPrimera.length) {
+                var aPaginadorPrimera = paginadorPrimera.attr("href").match(/^showthread\.php\?t=(\d+)/);
+                if(aPaginadorPrimera.length > 1) {
+                    $.get("/foro/showthread.php?t=" + aPaginadorPrimera[1], function(data) {
+                        htmlPrimeraPagina = data;
+                    });
+                }
+            }
+        }
     }
 
     switch(rutaURL) {
@@ -353,21 +434,12 @@ $(document).ready(function() {
             break;
 	}
 
+	$("body").append("<div id=\"sombraModal\"></div>");
+    anhadeVentanaModal("ventanaAviso", "Aviso", "mensaje");
     if(idUsuario && nombreUsuario) {
         urlBusqueda = "http://www.forocoches.com/foro/search.php?do=process&query=" + nombreUsuario + "&titleonly=0&showposts=1";
         $("#abreCitas").html("<div id=\"numCitas\">...</div><div class=\"smallfont\">nuevas citas</div>");
-        $("body").append("<div id=\"sombra\"></div>");
-        $("body").append("<div id=\"modal\">" +
-                         "<table>" +
-                         "<tr><th></th><th class=\"barraTitulo\">Citas de " + nombreUsuario + "</th><th>" +
-                         "<a id=\"cierraCitas\" href=\"#\" title=\"Cerrar\">X</a>" +
-                         "</th></tr>" +
-                         "<tr><td></td><td><div id=\"listaCitas\"></div></td><td></td></tr>" +
-                         "<tr><td colspan=\"3\" style=\"height:14px\"></td></tr>" +
-                         "</table></div>"
-                        );
-        $("#sombra").on("click", cierraCitas);
-        $("#cierraCitas").on("click", cierraCitas);
+        anhadeVentanaModal("ventanaCitas", "Citas de " + nombreUsuario, "listaCitas");
         $("#listaCitas").on("click", "a[id^=leeCita]", function() {
             var aPostFecha = $(this).attr("id").substr(7).split("_");
             citaLeida(aPostFecha[0], aPostFecha[1]);
@@ -381,5 +453,7 @@ $(document).ready(function() {
         deserializaCitasLeidas();
         buscaCitas();
     }
+    $("#sombraModal").on("click", cierraModal);
+    $(".cierraModal").on("click", cierraModal);
 
 });
