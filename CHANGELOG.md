@@ -1,3 +1,8 @@
+## 0.2.0 (2015-01-05)
+
+- Añadido el aviso de tema eliminado y el guardado automático de la primera página del hilo por si lo tumban.
+- Cambios estéticos menores.
+
 ## 0.1.3 (2014-12-31)
 
 - Añadidos los avisos de citas; solo se incluyen las 25 últimas.
