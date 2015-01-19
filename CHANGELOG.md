@@ -1,3 +1,9 @@
+## 0.2.1 (2015-01-19)
+
+- Inserta un reproductor de vídeo en los enlaces a gfycat.com, mediacru.sh y vídeos webm (añadido por [elultimorey](https://github.com/elultimorey)).
+- Comprueba si el tema ha sido eliminado en todas las páginas del post, no solo la última.
+- Corregidos bugs diversos al mostrar mensajes nuevos (mensajes repetidos y desordenados, vídeos de YouTube que desaparecen, etc.).
+
 ## 0.2.0 (2015-01-05)
 
 - Añadido el aviso de tema eliminado y el guardado automático de la primera página del hilo por si lo tumban.
