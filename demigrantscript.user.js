@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Demigrant Script
 // @namespace    https://github.com/cerdosaurio/
-// @version      0.2.0
+// @version      0.2.1
 // @description  Alternativa al Shurscript
 // @author       cerdosaurio
 // @include      http://www.forocoches.com*
@@ -12,6 +12,7 @@
 // ==/UserScript==
 
 var pagina = 1;
+var ultimaPagina = true;
 var htmlPrimeraPagina = "";
 var botonNuevosPosts = null;
 var numNuevosPosts = 0;
@@ -19,6 +20,8 @@ var idUsuario = 0;
 var nombreUsuario = null;
 var urlBusqueda = null;
 var numNuevasCitas = 0;
+var postsOriginales = {};
+var postsEditados = {};
 
 function despliegaNuevosPosts() {
     $(".postInvisible").show();
@@ -27,6 +30,17 @@ function despliegaNuevosPosts() {
 	numNuevosPosts = 0;
     if(document.title.charAt(0) == "*")
         document.title = document.title.substr(2);
+}
+
+function eliminaNuevosPosts() {
+    $(".postInvisible").remove();
+    botonNuevosPosts.remove();
+    botonNuevosPosts = null;
+	numNuevosPosts = 0;
+    if(document.title.charAt(0) == "*")
+        document.title = document.title.substr(2);
+    $("div#posts").remove("#botonNuevaPagina");
+    return true;
 }
 
 function muestraAviso() {
@@ -60,15 +74,49 @@ function detectaTemaEliminado(html) {
 	return avisoEliminado.length && $.trim(avisoEliminado.text()) == "Tema especificado inválido.";
 }
 
+function muestraPostOriginal(idPost) {
+    $("#td_post_" + idPost).html(postsOriginales[idPost]);
+    $("#verOriginal" + idPost).hide();
+    $("#verEditado" + idPost).show();
+}
+
+function muestraPostEditado(idPost) {
+    $("#td_post_" + idPost).html(postsEditados[idPost]);
+    $("#verOriginal" + idPost).show();
+    $("#verEditado" + idPost).hide();
+}
+
 function buscaNuevosPosts() {
     $.get(document.URL, function(data) {
-        var html = $.parseHTML(data);
+        var html = $.parseHTML(data, document, true);
+
         if(detectaTemaEliminado(html)) {
             $("div#posts").remove("#botonNuevaPagina");
             avisoTemaEliminado();
             return;
         }
-        if(!$("#botonNuevaPagina").length) {
+/*
+        $("table[class^=tborder][id^=post]", html).each(function() {
+            var idPost = $(this).attr("id").substr(4);
+			var htmlNuevo = $("#td_post_" + idPost, this).html();
+            if(postsOriginales[idPost] === undefined)
+                postsOriginales[idPost] = htmlNuevo;
+            else {
+                if(postsOriginales[idPost] != htmlNuevo) {//var i;for(i=0;i<htmlNuevo.length;i++)if(postsOriginales[idPost].charAt(i) != htmlNuevo.charAt(i)){alert(postsOriginales[idPost].substr(i) +" "+htmlNuevo.substr(i));break;}
+                    var piePost = $("td", $("#post" + idPost + " > tbody > tr").last()).last();
+                    if(!$(".cabeceraPostEditado", piePost).length) {
+                        piePost.prepend($("<div class=\"cabeceraPostEditado\" id=\"verOriginal" + idPost + "\"><strong>Post editado</strong> - ver original</div>"));
+                        piePost.prepend($("<div class=\"cabeceraPostEditado\" id=\"verEditado" + idPost + "\"><strong>Post editado</strong> - ver editado</div>"));
+                    }
+                    if(postsEditados[idPost] === undefined || postsEditados[idPost] !== htmlNuevo) {
+                        postsEditados[idPost] = htmlNuevo;
+                        muestraPostEditado(idPost);
+                    }
+                }
+            }
+		});
+*/
+        if(ultimaPagina) {
             var nuevos = [];
             $("table[class^=tborder][id^=post]", html).each(function() {
                 if(!$("table#" + $(this).attr("id")).length) {
@@ -99,10 +147,13 @@ function buscaNuevosPosts() {
                     window.location.href = paginadorSiguiente.attr("href");//url + "?t=" + hilo + "&page=" + (pagina + 1);
                 });
                 $("div#posts #lastpost").before(botonNuevaPagina);
+                ultimaPagina = false;
             }
-//			else
-	    		setTimeout(buscaNuevosPosts, 30000);
         }
+
+		setTimeout(buscaNuevosPosts, 30000);
+    }).fail(function() {
+		setTimeout(buscaNuevosPosts, 30000);
     });
 }
 
@@ -326,6 +377,89 @@ function anhadeVentanaModal(idVentana, titulo, idCuerpo, botones) {
                     );
 }
 
+function cargaVideos() {
+
+	// Carga videos a partir de url's .webm
+    $('a[href$=".webm"]').each(function() {
+        var link = $(this).attr('href');
+       
+        var video = document.createElement('video');
+        video.src = link;
+        video.autoplay = false;
+        video.loop = true;
+        video.muted = true;
+        video.controls = true;
+        video.style.maxWidth = "600px";
+        video.style.maxHeight = "600px";
+        video.addEventListener('mouseover', function(event) {
+            this.play();
+                img.style.visibility = "hidden";
+        });
+        video.addEventListener('click' , function(event) {
+            if (this.paused) {
+                this.play();
+            } else {
+                this.pause();
+            }
+        });
+               
+        var img = document.createElement('img');
+                img.src="http://www.webmproject.org/media/images/webm-558x156.png";
+        img.style.position = "relative";
+                img.style.maxWidth = "200px";
+                //img.style.maxHeight = "50px";
+        img.style.top = "-10px";
+        img.style.left = "-210px";
+        img.style.opacity = "0.5";
+       
+        $(this).after(img);
+        $(this).after(video);
+        $(this).remove();
+       
+    });
+   
+    // Carga videos de gfycat.com via api gfycat http://gfycat.com/api
+    $('a[href*="gfycat.com"]').each(function() {
+        var dataID = $(this).attr('href').replace(/.*?:\/\/([w]+)?\.?gfycat\.com\//g, "");
+        var $this = $(this);
+        $.ajax({
+          type: "GET",
+          url: "http://gfycat.com/cajax/get/"+dataID,
+          async: true,
+          dataType: "json",
+          success: function(data){
+            var video = document.createElement('video');
+            video.src = data.gfyItem.mp4Url;
+            video.src = data.gfyItem.webmUrl;
+            video.autoplay = false;
+            video.loop = true;
+            video.muted = true;
+            video.controls = true;
+            video.style.maxWidth = "600px";
+            video.style.maxHeight = "600px";
+            $this.append('<br>');
+            $this.after(video);
+          }
+        });
+    });
+     
+    // Carga videos de mediacru.sh
+    $('a[href*="mediacru.sh"]').each(function() {    
+       var url = $(this).attr('href').replace(/.*?:\/\//g, "");
+       var video = document.createElement('video');
+       video.src = '//cdn.'+url+'.mp4';
+       video.src = '//cdn.'+url+'.webm';
+       video.autoplay = false;
+       video.loop = true;
+       video.muted = true;
+       video.controls = true;
+       video.style.maxWidth = "600px";
+       video.style.maxHeight = "600px";
+       $(this).append('<br>');
+       $(this).after(video);
+    });
+}
+
 $(document).ready(function() {
 
     var head = document.getElementsByTagName("head")[0];
@@ -334,6 +468,9 @@ $(document).ready(function() {
         style.type = "text/css";
         style.innerHTML =
             ".botonNuevosPosts { cursor: pointer; color: #fff; font-size: 18px; background-color: #2a2; margin: 16px 0; padding: 8px; text-align: center; }" +
+            ".cabeceraPostEditado { cursor: pointer; font-size: 13px; color: #fff; background-color: #2a2; margin: 8px 0; padding: 8px; text-align: center; }" +
+            ".postBorrado { position: relative; }" +
+            ".postBorrado:after { content: \" \"; z-index: 10; display: block; position: absolute; height: 100%; top: 0; left: 0; right: 0; background: rgba(255, 255, 255, 0.5); pointer-events: none; }" +
             ".cuadroHiloEliminado { color: #fff; font-size: 18px; background-color: #d20; margin: 16px 0; padding: 8px; text-align: center; }" +
             ".verPrimeraPagina { cursor: pointer; }" +
             "#abreCitas { white-space: nowrap; color: #ccc; background-color: #fff; }" +
@@ -380,8 +517,26 @@ $(document).ready(function() {
         var paginadorActual = $(".pagenav td.alt2 > span.mfont > strong").first();
         if(paginadorActual.length)
             pagina = Number(paginadorActual.text());
-        if(!$(".pagenav a[href$='&page=" + (pagina + 1) + "']").length)
+        ultimaPagina = !$(".pagenav a[href$='&page=" + (pagina + 1) + "']").length;
+//        if(!$(".pagenav a[href$='&page=" + (pagina + 1) + "']").length) {
+/*            $("#posts td[id^=td_post_]").each(function() {
+                var post = $(this).clone().remove("div.video-youtube");
+                postsOriginales[$(this).attr("id").substr(8)] = post.html().
+                	replace(/ title=\"Ver Mensaje\"/g, "").
+                	replace(/ title=\"Pulsar imagen para la versión ampliada[^\"]*\"/g, "").
+                	replace(/ sl-processed=\"1\"/g, "").
+					replace(/ style=\"display: none !important;\"/g, ""). // bloqueado por Adblock
+                	replace(/<div align=\"center\" class=\"video-youtube\"><div class=\"video-container\"><iframe title=\"YouTube video player\" class=\"youtube-player\" type=\"text\/html\" width=\"\d+\" height=\"\d+\" src=\"[^\"]+\" frameborder=\"0\" allowfullscreen=\"\"><\/iframe><\/div><\/div>/g, "");
+            });*/
 		    setTimeout(buscaNuevosPosts, 30000);
+            $("#qr_submit").on("click", eliminaNuevosPosts);
+/*            $("#posts").on("click", "div[id^=verOriginal]", function() {
+                muestraPostOriginal($(this).attr("id").substr(11));
+            });
+            $("#posts").on("click", "div[id^=verEditado]", function() {
+                muestraPostEditado($(this).attr("id").substr(10));
+            });*/
+//        }
         if(pagina > 1) {
             var paginadorPrimera = $(".pagenav td.alt1 > a.mfont").first();
             if(paginadorPrimera.length) {
@@ -456,4 +611,5 @@ $(document).ready(function() {
     $("#sombraModal").on("click", cierraModal);
     $(".cierraModal").on("click", cierraModal);
 
+    cargaVideos();
 });
