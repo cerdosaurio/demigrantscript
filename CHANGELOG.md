@@ -1,3 +1,8 @@
+## 0.2.2 (2015-01-29)
+
+- Eliminado el sistema de citas porque Ilitri ya lo ha implementado de serie en FC (da lo que promete, mis dies).
+- Las cajas de menciones y citas se actualizan automáticamente en las páginas de hilos.
+
 ## 0.2.1 (2015-01-19)
 
 - Inserta un reproductor de vídeo en los enlaces a gfycat.com, mediacru.sh y vídeos webm (añadido por [elultimorey](https://github.com/elultimorey)).
