@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Demigrant Script
 // @namespace    https://github.com/cerdosaurio/
-// @version      0.2.1
+// @version      0.2.2
 // @description  Alternativa al Shurscript
 // @author       cerdosaurio
 // @include      http://www.forocoches.com*
@@ -18,8 +18,6 @@ var botonNuevosPosts = null;
 var numNuevosPosts = 0;
 var idUsuario = 0;
 var nombreUsuario = null;
-var urlBusqueda = null;
-var numNuevasCitas = 0;
 var postsOriginales = {};
 var postsEditados = {};
 
@@ -86,9 +84,22 @@ function muestraPostEditado(idPost) {
     $("#verEditado" + idPost).hide();
 }
 
+function buscaCitasMenciones(html, tipo) {
+    return Number($("td.alt2 > a[href$='tab=" + tipo + "'] > div > span", html).first().text());
+}
+
+function actualizaCitasMenciones(numero, tipo) {
+	var enlace = $("td.alt2 > a[href$='tab=" + tipo + "']").first();
+    enlace.parent().css("background-color", numero ? "#ffffcc" : "#f1f1f1");
+    $("span", enlace).first().text(numero);
+}
+
 function buscaNuevosPosts() {
     $.get(document.URL, function(data) {
         var html = $.parseHTML(data, document, true);
+
+        actualizaCitasMenciones(buscaCitasMenciones(html, "mentions"), "mentions");
+        actualizaCitasMenciones(buscaCitasMenciones(html, "quotes"), "quotes");
 
         if(detectaTemaEliminado(html)) {
             $("div#posts").remove("#botonNuevaPagina");
@@ -157,196 +168,10 @@ function buscaNuevosPosts() {
     });
 }
 
-var meses = {
-    "ene": 1, "feb": 2, "mar": 3, "abr": 4, "may": 5, "jun": 6,
-    "jul": 7, "ago": 8, "sep": 9, "oct": 10, "nov": 11, "dic": 12
-};
-
-function analizaFecha(fecha) {
-    var dia, mes, anho, hora, minuto;
-    if(fecha === undefined)
-        fecha = "Ahora";
-    else {
-    	var aFechaHora = fecha.split(", ");
-    	if(aFechaHora.length != 2)
-            return null;
-        hora = aFechaHora[1].substr(0, 2);
-        minuto = aFechaHora[1].substr(3, 2);
-        fecha = aFechaHora[0];
-    }
-    switch(fecha) {
-        case "Ahora":
-            var d = new Date();
-            dia = d.getDate();
-            mes = d.getMonth() + 1;
-            anho = d.getFullYear();
-            hora = d.getHours();
-            hora = (hora < 10 ? "0" : "") + hora;
-            minuto = d.getMinutes();
-            minuto = (minuto < 10 ? "0" : "") + minuto;
-            break;
-        case "Hoy":
-            var d = new Date();
-            dia = d.getDate();
-            mes = d.getMonth() + 1;
-            anho = d.getFullYear();
-            break;
-        case "Ayer":
-            var d = new Date();
-            d.setTime(d.getTime() - 24*3600*1000);
-            dia = d.getDate();
-            mes = d.getMonth() + 1;
-            anho = d.getFullYear();
-            break;
-        default:
-            var aFecha = aFechaHora[0].split("-");
-            if(aFecha.length != 3)
-                return null;
-            dia = Number(aFecha[0]);
-            mes = meses[aFecha[1]];
-            anho = Number(aFecha[2]);
-            break;
-    }
-    return anho + (mes < 10 ? "0" : "") + mes + (dia < 10 ? "0" : "") + dia + hora + minuto;
-}
-
-function leeTMinNuevasCitas() {
-    if(!idUsuario)
-        return null;
-	var tMinNuevasCitas = GM_getValue("Demigrant" + idUsuario + "_ct", "");
-    if(tMinNuevasCitas === "") {
-        tMinNuevasCitas = analizaFecha();
-        GM_setValue("Demigrant" + idUsuario + "_ct", tMinNuevasCitas);
-    }
-    return tMinNuevasCitas;
-}
-
-function escribeTMinNuevasCitas(tMinNuevasCitas) {
-    if(idUsuario)
-        GM_setValue("Demigrant" + idUsuario + "_ct", tMinNuevasCitas);
-}
-
-function deserializaCitasLeidas() {
-    var citasLeidas = {};
-    if(idUsuario) {
-        var tMinNuevasCitas = leeTMinNuevasCitas();
-    	var aCitas = GM_getValue("Demigrant" + idUsuario + "_cl", "").split(",");
-        for(var i = 0; i < aCitas.length; i++) {
-            var aPostFecha = aCitas[i].split("_");
-            if(aPostFecha.length == 2 && aPostFecha[1] >= tMinNuevasCitas)
-                citasLeidas[aPostFecha[0]] = aPostFecha[1];
-        }
-    }
-    return citasLeidas;
-}
-
-function serializaCitasLeidas(citasLeidas) {
-    if(idUsuario) {
-        var tMinNuevasCitas = leeTMinNuevasCitas();
-        var valor = "";
-        for(var idPost in citasLeidas)
-            if(citasLeidas[idPost] >= tMinNuevasCitas)
-            	valor += "," + idPost + "_" + citasLeidas[idPost];
-    	GM_setValue("Demigrant" + idUsuario + "_cl", valor.substr(1));
-    }
-}
-
-/*
-function citaLeida(idPost) {
-    var citasLeidas = GM_getValue("DemigrantScript_citasLeidas", "");
-    var patron = new RegExp("\\b" + idPost + "\\b,|,\\b" + idPost + "\\b$", "g");
-    return citasLeidas.replace(patron, "");
-}
-*/
 function cierraModal() {
     $('#sombraModal').hide();
     $('.ventanaModal').hide();
     return false;
-}
-
-function actualizaContadorCitas() {
-    $("#abreCitas #numCitas").html(numNuevasCitas);
-    $("#abreCitas .smallfont").html(numNuevasCitas == 1 ? "nueva cita" : "nuevas citas");
-    $("#abreCitas").removeClass("siNuevas noNuevas").addClass(numNuevasCitas ? "siNuevas" : "noNuevas");
-}
-
-function citaLeida(idPost, timestamp) {
-    var citasLeidas = deserializaCitasLeidas();
-    citasLeidas[idPost] = timestamp;
-    serializaCitasLeidas(citasLeidas);
-    numNuevasCitas--;
-    var idPostFecha = idPost + "_" + timestamp;
-    var divCita = $("#listaCitas" + idPostFecha);
-    divCita.removeClass("noLeido").addClass("leido");
-    $("#leeCita" + idPostFecha, divCita).removeAttr("id");
-    $("#citaLeida" + idPostFecha, divCita).parent().remove();
-    divCita.remove();
-    var insertado = false;
-    $("#listaCitas > .leido").each(function() {
-        var aId = $(this).attr("id").substr(10).split("_");
-        if(aId[1] < timestamp) {
-            divCita.insertBefore($(this));
-            insertado = true;
-            return false;
-        }
-        return true;
-    });
-    if(!insertado)
-        $("#listaCitas").append(divCita);
-    actualizaContadorCitas();
-    return true;
-}
-
-function buscaCitas() {
-   	tCitasLeidas = GM_getValue("Demigrant" + idUsuario + "_ct", "");
-    $.get(urlBusqueda, function(data) {
-        var html = $.parseHTML(data);
-        var htmlNoLeidos = "";
-        var htmlLeidos = "";
-    	var citasLeidas = deserializaCitasLeidas();
-        var tMinNuevasCitas = leeTMinNuevasCitas();
-        var tPrimeraNuevaCita = "";
-		$("table[class^=tborder][id^=post]", html).each(function() {
-            var idPost = Number($(this).attr("id").substr(4));
-            var fechaHora = $.trim($("td:first", this).clone().children().remove().end().text());
-            var timestamp = analizaFecha(fechaHora);
-            var enlaceHilo = $("td.alt1 a[href^='showthread.php?t=']:first", this);
-            var tituloHilo = $("strong", enlaceHilo);
-            if(tituloHilo.length != 1)
-                tituloHilo = enlaceHilo;
-            tituloHilo = tituloHilo.html();
-            var idHilo = enlaceHilo.attr("href").match(/^showthread\.php\?t=(\d+)/);
-            idHilo = idHilo.length == 2 ? Number(idHilo[1]) : 0;
-            var enlaceAutor = $("td.alt1 a[href^='member.php?u=']:first", this);
-            var textoPost = $("td.alt1 a[href^='showthread.php?p=" + idPost + "']:first", this).text();
-         	var leido = citasLeidas[idPost] !== undefined || timestamp < tMinNuevasCitas;
-            if(!leido) {
-                numNuevasCitas++;
-                tPrimeraNuevaCita = timestamp;
-            }
-            var idPostFecha = idPost + "_" + timestamp;
-            var entrada = "<div id=\"listaCitas" + idPostFecha + "\" class=\"" + (leido ? "leido" : "noLeido") + "\"><table><tr><td class=\"titulo\">" +
-                "<a href=\"/foro/showthread.php?t=" + idHilo + "\" target=\"_blank\">" + tituloHilo + "</a><br/>" +
-				"<span class=\"smallfont\"><a href=\"/foro/" + enlaceAutor.attr("href") + "\" target=\"_blank\">" + enlaceAutor.html() + "</a>, " + fechaHora + "</span></td></tr>" +
-                "<tr><td class=\"cuerpo\">" +
-                	"<a " + (leido ? "" : "id=\"leeCita" + idPostFecha + "\" ") + "href=\"/foro/showthread.php?p=" + idPost + "#post" + idPost + "\" target=\"_blank\">" + textoPost + "</a>" +
-                "</td></tr></table>" +
-                (leido ? "" : "<div class=\"botones\"><a id=\"citaLeida" + idPostFecha + "\" href=\"#\">Marcar como ya leída</a></div>") +
-                "</div>";
-            if(leido)
-                htmlLeidos += entrada;
-            else
-                htmlNoLeidos += entrada;
-        });
-        if(tPrimeraNuevaCita !== "" && tPrimeraNuevaCita > tMinNuevasCitas)
-            escribeTMinNuevasCitas(tPrimeraNuevaCita);
-        $("#listaCitas").html(htmlNoLeidos + htmlLeidos);
-        actualizaContadorCitas();
-        $("#abreCitas").on("click", function() {
-            $("#sombraModal").show();
-            $("#ventanaCitas").show();
-        });
-    });
 }
 
 /*
@@ -460,6 +285,8 @@ function cargaVideos() {
     });
 }
 
+// fondo de citas: #ffffcc;
+
 $(document).ready(function() {
 
     var head = document.getElementsByTagName("head")[0];
@@ -493,20 +320,7 @@ $(document).ready(function() {
             ".ventanaModal .botonModal:hover { background-color: #ccc; color: #fff; }" +
             "#ventanaCitas { z-index: 101; top: 15%; left: 25%; width: 50%; height: 70%; }" +
             "#ventanaAviso { z-index: 102; left: 50%; top: 50%; margin-left: -300px; width: 600px; }" +
-            "#ventanaAviso #mensaje { text-align: center; }" +
-            "#listaCitas { width: 100%; height: 100%; overflow-y: auto; }" +
-            "#listaCitas > div { margin-right: 16px; border-bottom: solid 1px #ddd; padding-bottom: 8px }" +
-            "#listaCitas > div:last-child { border-bottom: none; padding-bottom: 4px }" +
-            "#listaCitas table { width:100%;border-collapse: collapse; }" +
-            "#listaCitas td { border: solid 1px #fff; padding: 6px 8px }" +
-            "#listaCitas td.titulo { padding-bottom: 2px; }" +
-            "#listaCitas td.titulo a { font-weight: bold; }" +
-            "#listaCitas td.titulo span.smallfont a { font-weight: normal; }" +
-            "#listaCitas td.cuerpo { font-style: italic; }" +
-            "#listaCitas div.leido td.cuerpo { font-size: 11px; }" +
-            "#listaCitas div.noLeido td.cuerpo { background: #2a2; }" +
-            "#listaCitas div.noLeido td.cuerpo a { color: #fff; }" +
-            "#listaCitas div.botones { margin-top: 4px; font-size: 11px; }";
+            "#ventanaAviso #mensaje { text-align: center; }";
         head.appendChild(style);
     }
 
@@ -564,7 +378,7 @@ $(document).ready(function() {
                             var aEnlace = enlace.attr("href").match(/userid=(\d+)/);
                             if(aEnlace.length == 2) {
                                 idUsuario = Number(aEnlace[1]);
-                                $("table.cajascat td[colspan=2] table tr").first().append("<td id=\"abreCitas\" rowspan=\"3\"></td>");
+//                                $("table.cajascat td[colspan=2] table tr").first().append("<td id=\"abreCitas\" rowspan=\"3\"></td>");
                             }
                         }
                     }
@@ -580,7 +394,7 @@ $(document).ready(function() {
                     if(hrefUsuario.substr(0, 13) == "member.php?u=") {
                         idUsuario = Number(hrefUsuario.substr(13));
                         nombreUsuario = enlaceUsuario.text();
-                        $(this).append("<td id=\"abreCitas\"></td>");
+//                        $(this).append("<td id=\"abreCitas\"></td>");
                         return false;
                     }
                 }
@@ -591,23 +405,6 @@ $(document).ready(function() {
 
 	$("body").append("<div id=\"sombraModal\"></div>");
     anhadeVentanaModal("ventanaAviso", "Aviso", "mensaje");
-    if(idUsuario && nombreUsuario) {
-        urlBusqueda = "http://www.forocoches.com/foro/search.php?do=process&query=" + nombreUsuario + "&titleonly=0&showposts=1";
-        $("#abreCitas").html("<div id=\"numCitas\">...</div><div class=\"smallfont\">nuevas citas</div>");
-        anhadeVentanaModal("ventanaCitas", "Citas de " + nombreUsuario, "listaCitas");
-        $("#listaCitas").on("click", "a[id^=leeCita]", function() {
-            var aPostFecha = $(this).attr("id").substr(7).split("_");
-            citaLeida(aPostFecha[0], aPostFecha[1]);
-            return true;
-        });
-        $("#listaCitas").on("click", "a[id^=citaLeida]", function() {
-            var aPostFecha = $(this).attr("id").substr(9).split("_");
-            citaLeida(aPostFecha[0], aPostFecha[1]);
-            return false;
-        });
-        deserializaCitasLeidas();
-        buscaCitas();
-    }
     $("#sombraModal").on("click", cierraModal);
     $(".cierraModal").on("click", cierraModal);
 
