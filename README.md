@@ -1,4 +1,5 @@
-![soyprogramador.gif](http://i.imgur.com/TGwrr7T.gif)
+<img alt="soyprogramador.gif" src="https://github.com/cerdosaurio/demigrantscript/blob/master/soyprogramador.gif">
+
 Demigrant Script
 ================
 
